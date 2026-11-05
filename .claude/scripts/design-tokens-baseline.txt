@@ -1,0 +1,4 @@
+# Known design-system violations, accepted as legacy. Regenerate with:
+#   .claude/scripts/check-design-tokens.sh --update-baseline
+# Format: <repo-relative path><TAB><RULE>. Line numbers are deliberately not stored.
+

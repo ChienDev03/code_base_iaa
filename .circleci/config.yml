@@ -1,0 +1,185 @@
+version: 2.1
+
+parameters:
+  notifications_only:
+    type: boolean
+    default: false
+  release_environment:
+    type: enum
+    enum: [dev, production]
+    default: dev
+
+commands:
+  decode_release_inputs:
+    parameters:
+      environment:
+        type: enum
+        enum: [dev, production]
+    steps:
+      - run:
+          name: Decode release environment
+          command: |
+            release_environment="<< parameters.environment >>"
+            suffix=$(printf '%s' "$release_environment" | tr '[:lower:]' '[:upper:]')
+
+            if [ "$release_environment" = "dev" ]; then
+              env_path=".env.dev"
+            else
+              env_path=".env"
+            fi
+
+            decode_required_file() {
+              variable_name="$1"
+              destination="$2"
+              value="${!variable_name:-}"
+
+              if [ -z "$value" ]; then
+                echo "Missing CircleCI variable: $variable_name"
+                return 1
+              fi
+
+              mkdir -p "$(dirname "$destination")"
+              if ! printf '%s' "$value" | base64 --decode > "$destination" || [ ! -s "$destination" ]; then
+                echo "Failed to decode $variable_name to $destination."
+                return 1
+              fi
+
+              echo "Decoded $variable_name to $destination."
+            }
+
+            umask 077
+            decode_required_file "ENV_FILE_BASE64_${suffix}" "$env_path"
+
+            printf 'export FLAVOR=%q\n' "$release_environment" >> "$BASH_ENV"
+            echo "Release environment: $release_environment"
+
+  install_release_dependencies:
+    parameters:
+      include_android_sdk:
+        type: boolean
+        default: false
+    steps:
+      - restore_cache:
+          keys:
+            - gems-v1-{{ checksum "Gemfile.lock" }}
+            - gems-v1-
+      - run:
+          name: Install release dependencies
+          command: |
+            gem install bundler --no-document --conservative
+            bundle config set --local path vendor/bundle
+            bundle check || bundle install --jobs=4 --retry=3
+
+            if ! command -v jq >/dev/null 2>&1 || ! command -v curl >/dev/null 2>&1; then
+              sudo apt-get update -qq
+              sudo apt-get install -y -qq curl jq
+            fi
+
+            if [ "<< parameters.include_android_sdk >>" = "true" ]; then
+              yes | sdkmanager --licenses >/dev/null || true
+              sdkmanager "platforms;android-37.1" "build-tools;37.0.0"
+            fi
+      - save_cache:
+          key: gems-v1-{{ checksum "Gemfile.lock" }}
+          paths:
+            - vendor/bundle
+
+jobs:
+  android_distribution:
+    parameters:
+      environment:
+        type: enum
+        enum: [dev, production]
+    docker:
+      - image: cimg/android:2026.08
+    resource_class: large
+    environment:
+      FASTLANE_SKIP_UPDATE_CHECK: "true"
+      FASTLANE_DISABLE_ANIMATION: "true"
+      LC_ALL: C.UTF-8
+      LANG: C.UTF-8
+    steps:
+      - checkout
+      - decode_release_inputs:
+          environment: << parameters.environment >>
+      - restore_cache:
+          keys:
+            - gradle-v1-android-2026.08-{{ arch }}-<< parameters.environment >>-{{ checksum "gradle/wrapper/gradle-wrapper.properties" }}-{{ checksum "gradle/libs.versions.toml" }}-{{ .Revision }}
+            - gradle-v1-android-2026.08-{{ arch }}-<< parameters.environment >>-{{ checksum "gradle/wrapper/gradle-wrapper.properties" }}-{{ checksum "gradle/libs.versions.toml" }}-
+      - install_release_dependencies:
+          include_android_sdk: true
+      - run:
+          name: Configure Gradle memory for CI
+          command: |
+            ci_gradle_home="${GRADLE_USER_HOME:-$HOME/.gradle}"
+            mkdir -p "$ci_gradle_home"
+            printf '%s\n' \
+              '' \
+              'org.gradle.jvmargs=-Xmx4096m -Dfile.encoding=UTF-8' \
+              'kotlin.daemon.jvmargs=-Xmx1024m' \
+              'org.gradle.workers.max=2' \
+              'org.gradle.parallel=false' \
+              >> "$ci_gradle_home/gradle.properties"
+      - run:
+          name: Run Android distribution lane
+          command: |
+            source "$BASH_ENV"
+            bundle exec fastlane android firebase_distribution --env "$FLAVOR"
+      - save_cache:
+          key: gradle-v1-android-2026.08-{{ arch }}-<< parameters.environment >>-{{ checksum "gradle/wrapper/gradle-wrapper.properties" }}-{{ checksum "gradle/libs.versions.toml" }}-{{ .Revision }}
+          paths:
+            - ~/.gradle/wrapper
+            - ~/.gradle/caches
+      - store_artifacts:
+          path: app/build/outputs/apk
+          destination: apk
+
+  release_notifications:
+    parameters:
+      environment:
+        type: enum
+        enum: [dev, production]
+    docker:
+      - image: cimg/ruby:3.3
+    environment:
+      FASTLANE_SKIP_UPDATE_CHECK: "true"
+      FASTLANE_DISABLE_ANIMATION: "true"
+      LC_ALL: C.UTF-8
+      LANG: C.UTF-8
+    steps:
+      - checkout
+      - decode_release_inputs:
+          environment: << parameters.environment >>
+      - install_release_dependencies
+      - run:
+          name: Run release notification lane
+          command: |
+            source "$BASH_ENV"
+            bundle exec fastlane android publish_current_release_notifications --env "$FLAVOR"
+
+workflows:
+  distribute:
+    when:
+      not: << pipeline.parameters.notifications_only >>
+    jobs:
+      - android_distribution:
+          name: distribute-dev
+          environment: dev
+          context: APP_NAME-release
+          filters:
+            branches:
+              only: /^build[/_][0-9]+(\.[0-9]+)+$/
+      - android_distribution:
+          name: distribute-production
+          environment: production
+          context: APP_NAME-release
+          filters:
+            branches:
+              only: /^release[/_][0-9]+(\.[0-9]+)+$/
+
+  notifications_only:
+    when: << pipeline.parameters.notifications_only >>
+    jobs:
+      - release_notifications:
+          environment: << pipeline.parameters.release_environment >>
+          context: APP_NAME-release

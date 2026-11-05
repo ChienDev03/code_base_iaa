@@ -1,0 +1,4 @@
+<resources>
+<string name="action_retry">Retry</string><string name="action_back">Back</string><string name="action_choose">Choose</string><string name="action_refresh">Refresh</string>
+<string name="error_generic">Something went wrong. Please try again.</string>
+</resources>

@@ -1,0 +1,5 @@
+# Placeholder only; do not commit the completed file.
+storeFile=/absolute/path/to/new-app-release.jks
+storePassword=REPLACE_LOCALLY
+keyAlias=REPLACE_LOCALLY
+keyPassword=REPLACE_LOCALLY

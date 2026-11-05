@@ -1,0 +1,2 @@
+# Firebase App Distribution is the only distribution channel for this pipeline.
+gem "fastlane-plugin-firebase_app_distribution"

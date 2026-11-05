@@ -1,0 +1,229 @@
+require "json"
+require "open3"
+require "shellwords"
+require "dotenv"
+
+default_platform(:android)
+
+# Returns the selected Fastlane environment.
+def selected_release_environment
+  environment = Fastlane::Actions.lane_context[
+    Fastlane::Actions::SharedValues::ENVIRONMENT
+  ].to_s
+  UI.user_error!("Pass --env dev or --env production.") if environment.empty?
+  UI.user_error!("Unsupported environment: #{environment}") unless %w[dev production].include?(environment)
+  environment
+end
+
+# Loads the project-root dotenv file for the selected Fastlane profile.
+def load_project_environment
+  environment = selected_release_environment
+  env_path = File.expand_path(environment == "dev" ? "../.env.dev" : "../.env", __dir__)
+
+  unless File.file?(env_path)
+    UI.important("Project environment file not found for #{environment}; using process environment only.")
+    return
+  end
+
+  Dotenv.parse(env_path).each do |key, value|
+    ENV[key] = value unless ENV.key?(key)
+  end
+  UI.message("Loaded project environment profile: #{environment}")
+end
+
+# Returns the user-facing environment label.
+def release_environment_label
+  {
+    "dev" => "Development",
+    "production" => "Production"
+  }.fetch(selected_release_environment)
+end
+
+# Runs a Fastlane-owned release script while keeping JSON stdout separate from logs.
+def run_release_notification_script(script_name, arguments)
+  script_path = File.join(__dir__, script_name)
+  UI.user_error!("Release script not found: #{script_path}") unless File.file?(script_path)
+
+  command = ["bash", script_path] + arguments.map(&:to_s)
+  UI.command(command.shelljoin)
+  stdout, stderr, status = Open3.capture3(*command)
+  stderr.each_line do |line|
+    UI.command_output(line.strip) unless line.strip.empty?
+  end
+
+  return stdout if status.success?
+
+  output = [stdout, stderr].reject(&:empty?).join
+  UI.user_error!(
+    "Release notification failed after distribution completed (exit #{status.exitstatus}).\n#{output}"
+  )
+end
+
+# Publishes the Notion page first, then forwards its output to Discord unchanged.
+def publish_release_notifications(platform:, version:, build_number:, release_notes_path: nil)
+  release_notes_path ||= File.expand_path("../release_notes.txt", __dir__)
+  UI.user_error!("Release notes not found: #{release_notes_path}") unless File.file?(release_notes_path)
+
+  notion_output = run_release_notification_script(
+    "publish_notion_release.sh",
+    [
+      "--input", release_notes_path,
+      "--platform", platform,
+      "--version", version,
+      "--build-number", build_number,
+      "--environment", release_environment_label
+    ]
+  )
+
+  begin
+    notion_result = JSON.parse(notion_output)
+  rescue JSON::ParserError => error
+    UI.user_error!("Notion publisher returned invalid JSON: #{error.message}")
+  end
+
+  UI.user_error!("Notion publication failed.") unless notion_result["success"] == true
+  release_page_url = notion_result["release_page_url"].to_s
+  UI.user_error!("Notion publication did not return a release page URL.") if release_page_url.empty?
+
+  assignees = notion_result.fetch("assignees", [])
+  unless assignees.is_a?(Array) && assignees.all? { |assignee| assignee.is_a?(String) }
+    UI.user_error!("Notion publication returned invalid assignees.")
+  end
+
+  backlog = notion_result.fetch("backlog", [])
+  backlog = [] unless backlog.is_a?(Array)
+
+  run_release_notification_script(
+    "send_discord_release_notification.sh",
+    [
+      "--release-url", release_page_url,
+      "--assignees-json", JSON.generate(assignees.uniq),
+      "--backlog-json", JSON.generate(backlog),
+      "--platform", platform,
+      "--version", version,
+      "--build-number", build_number,
+      "--environment", release_environment_label
+    ]
+  )
+
+  UI.success("Notion release page: #{release_page_url}")
+end
+
+# Extracts a named block from a Gradle Kotlin DSL file.
+def gradle_block_body(contents, block_start)
+  start_index = contents.index(block_start)
+  return nil if start_index.nil?
+
+  opening_brace_index = contents.index("{", start_index)
+  return nil if opening_brace_index.nil?
+
+  depth = 0
+  contents.each_char.with_index do |character, index|
+    next if index < opening_brace_index
+
+    depth += 1 if character == "{"
+    depth -= 1 if character == "}"
+    return contents[(opening_brace_index + 1)...index] if depth.zero?
+  end
+
+  nil
+end
+
+# Reads the configured Android version and applies the selected flavor suffix.
+def android_release_metadata
+  gradle_path = File.expand_path("../app/build.gradle.kts", __dir__)
+  UI.user_error!("Android Gradle configuration not found: #{gradle_path}") unless File.file?(gradle_path)
+
+  contents = File.read(gradle_path)
+  default_config = gradle_block_body(contents, "defaultConfig")
+  flavor_config = gradle_block_body(contents, "create(\"#{selected_release_environment}\")")
+  UI.user_error!("defaultConfig block not found.") if default_config.nil?
+  UI.user_error!("Flavor block not found.") if flavor_config.nil?
+
+  build_number = default_config.match(/^\s*versionCode\s*=.*\?:\s*(\d+)\s*$/)&.captures&.first
+  base_version = default_config.match(/^\s*versionName\s*=\s*"([^"]+)"\s*$/)&.captures&.first
+  version_suffix = flavor_config.match(/^\s*versionNameSuffix\s*=\s*"([^"]+)"\s*$/)&.captures&.first.to_s
+  UI.user_error!("versionCode not found.") if build_number.nil?
+  UI.user_error!("versionName not found.") if base_version.nil?
+
+  {version: "#{base_version}#{version_suffix}", build_number: build_number.to_i}
+end
+
+# Reads a value from Firebase release objects returned as symbol- or string-keyed hashes.
+def firebase_release_value(release, key)
+  release[key.to_sym] || release[key.to_s]
+end
+
+platform :android do
+  before_all do
+    load_project_environment
+  end
+
+  desc "Return the latest Firebase App Distribution release, if one exists."
+  private_lane :latest_firebase_release do
+    begin
+      firebase_app_distribution_get_latest_release(
+        app: ENV.fetch("FIREBASE_APP_ID"),
+        firebase_cli_token: ENV["FIREBASE_TOKEN"]
+      )
+    rescue StandardError => error
+      UI.important("Could not fetch the latest Firebase release (normal for a first release): #{error.message}")
+      nil
+    end
+  end
+
+  desc "Build a signed release APK, distribute it with Firebase, then notify Notion and Discord."
+  lane :firebase_distribution do
+    metadata = android_release_metadata
+    latest_release = latest_firebase_release
+    latest_build_number = firebase_release_value(latest_release, :buildVersion).to_i if latest_release
+    build_number = [metadata.fetch(:build_number), latest_build_number.to_i + 1].max
+    flavor = selected_release_environment
+    release_notes_path = File.expand_path("../release_notes.txt", __dir__)
+    UI.user_error!("Release notes not found: #{release_notes_path}") unless File.file?(release_notes_path)
+
+    gradle(
+      task: "assemble",
+      flavor: flavor,
+      build_type: "Release",
+      properties: {"releaseVersionCode" => build_number}
+    )
+
+    artifact_path = lane_context[SharedValues::GRADLE_APK_OUTPUT_PATH]
+    UI.user_error!("Gradle did not return an APK path.") if artifact_path.to_s.empty?
+
+    firebase_app_distribution(
+      app: ENV.fetch("FIREBASE_APP_ID"),
+      firebase_cli_token: ENV["FIREBASE_TOKEN"],
+      android_artifact_type: "APK",
+      android_artifact_path: artifact_path,
+      groups: ENV.fetch("FIREBASE_TESTER_GROUPS"),
+      release_notes: File.read(release_notes_path)
+    )
+
+    publish_release_notifications(
+      platform: "Android",
+      version: metadata.fetch(:version),
+      build_number: build_number,
+      release_notes_path: release_notes_path
+    )
+  end
+
+  desc "Re-publish Notion and Discord notifications for the latest Firebase release."
+  lane :publish_current_release_notifications do
+    latest_release = latest_firebase_release
+    UI.user_error!("No Firebase release found for this environment.") if latest_release.nil?
+
+    metadata = android_release_metadata
+    version = firebase_release_value(latest_release, :displayVersion).to_s
+    version = metadata.fetch(:version) if version.empty?
+    build_number = firebase_release_value(latest_release, :buildVersion).to_s
+    UI.user_error!("Latest Firebase release has no build number.") if build_number.empty?
+
+    publish_release_notifications(
+      platform: "Android",
+      version: version,
+      build_number: build_number
+    )
+  end
+end

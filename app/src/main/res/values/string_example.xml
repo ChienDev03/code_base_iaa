@@ -1,0 +1,8 @@
+<resources>
+<string name="example_title">Base Example</string><string name="example_catalog">Component catalog</string><string name="example_loading">Loading…</string>
+<string name="example_load_error">Unable to load examples. Please retry.</string><string name="example_missing">This example is unavailable.</string>
+<string name="example_selected">Selected: %1$d</string><string name="example_item">Example %1$d</string><string name="example_local_body">Offline example content.</string>
+<string name="example_input_label">Sample text</string><string name="example_show_dialog">Preview dialog</string>
+<string name="example_close_dialog">Close</string><string name="example_neutral_icon">Neutral example icon</string>
+<string name="example_validation_error">Enter 1–80 characters.</string>
+</resources>

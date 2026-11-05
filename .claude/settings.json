@@ -1,0 +1,97 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(./gradlew:*)",
+      "Bash(rtk gradlew:*)",
+      "Bash(maestro --version)",
+      "Bash(adb devices:*)",
+      "Bash(adb install:*)",
+      "Bash(adb uninstall:*)",
+      "Bash(adb logcat:*)",
+      "Bash(adb shell am start:*)",
+      "Bash(adb shell am force-stop:*)",
+      "Bash(adb shell pm clear:*)",
+      "Bash(adb shell dumpsys:*)",
+      "Bash(adb exec-out screencap:*)",
+      "Bash(adb emu:*)",
+      "Bash(git status:*)",
+      "Bash(git diff:*)",
+      "Bash(git log:*)",
+      "Bash(git show:*)",
+      "Bash(git branch:*)",
+      "Bash(git blame:*)",
+      "Bash(git stash list:*)",
+      "Bash(rtk git status:*)",
+      "Bash(rtk git diff:*)",
+      "Bash(rtk git log:*)",
+      "Bash(rtk gain:*)",
+      "Bash(node .gitnexus/run.cjs:*)",
+      "mcp__gitnexus__query",
+      "mcp__gitnexus__context",
+      "mcp__gitnexus__impact",
+      "mcp__gitnexus__api_impact",
+      "mcp__gitnexus__detect_changes",
+      "mcp__gitnexus__explain",
+      "mcp__gitnexus__trace",
+      "mcp__gitnexus__check",
+      "mcp__gitnexus__cypher",
+      "mcp__gitnexus__pdg_query",
+      "mcp__gitnexus__route_map",
+      "mcp__gitnexus__tool_map",
+      "mcp__gitnexus__shape_check",
+      "mcp__gitnexus__group_list",
+      "mcp__gitnexus__list_repos"
+    ],
+    "ask": [
+      "Bash(./gradlew test:*)",
+      "Bash(./gradlew testDevDebugUnitTest:*)",
+      "Bash(./gradlew testProductionDebugUnitTest:*)",
+      "Bash(./gradlew connectedDevDebugAndroidTest:*)",
+      "Bash(rtk gradlew testDevDebugUnitTest:*)",
+      "Bash(rtk gradlew testProductionDebugUnitTest:*)",
+      "Bash(rtk gradlew connectedDevDebugAndroidTest:*)",
+      "Bash(rtk maestro test:*)",
+      "Bash(rtk ./gradlew connectedDevDebugAndroidTest:*)",
+      "Bash(rtk ./gradlew testProductionDebugUnitTest:*)",
+      "Bash(rtk ./gradlew testDevDebugUnitTest:*)",
+      "Bash(rtk ./gradlew test:*)",
+      "Bash(maestro test:*)",
+      "Bash(git push:*)",
+      "Bash(git reset --hard:*)",
+      "Bash(git clean:*)",
+      "Read(./app/google-services.json)",
+      "mcp__gitnexus__rename",
+      "mcp__gitnexus__group_sync"
+    ],
+    "deny": [
+      "Read(./.env)",
+      "Read(./.env.dev)",
+      "Read(./.env.*)",
+      "Read(./local.properties)",
+      "Read(./**/*.jks)",
+      "Read(./**/*.keystore)",
+      "Read(./**/*.pem)",
+      "Read(./**/*.key)",
+      "Read(./build/**)",
+      "Read(./app/build/**)",
+      "Read(./.gradle/**)",
+      "Read(./.kotlin/**)"
+    ]
+  },
+  "hooks": {
+    "PostToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "f=$(jq -r \".tool_response.filePath // .tool_input.file_path // empty\"); case \"$f\" in *.kt) ;; *) exit 0;; esac; case \"$f\" in */presentation/*|*/core/ui/*|*/ui/theme/*|*/navigation/*) ;; *) grep -q \"@Composable\" \"$f\" 2>/dev/null || exit 0;; esac; s=\"${CLAUDE_PROJECT_DIR:-.}/.claude/scripts/check-design-tokens.sh\"; [ -x \"$s\" ] || exit 0; out=$(\"$s\" \"$f\" 2>&1) || jq -n --arg o \"$out\" \"{systemMessage:\\\"Design-system violations in the file just edited\\\", hookSpecificOutput:{hookEventName:\\\"PostToolUse\\\", additionalContext:(\\\"The design-token check failed on the UI file you just wrote. Fix these before continuing:\\\\n\\\" + \\$o)}}\"; exit 0",
+            "timeout": 20,
+            "statusMessage": "Checking design tokens (UI files only)"
+          }
+        ]
+      }
+    ]
+  }
+}
