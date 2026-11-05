@@ -8,9 +8,9 @@ These mirror `features/home` — read that vertical when a detail here is ambigu
 ## `data/repository/<Name>Repository.kt`
 
 ```kotlin
-package com.lutech.pairpulse.features.<name>.data.repository
+package com.your.sourbase.features.<name>.data.repository
 
-import com.lutech.pairpulse.features.<name>.data.model.<Name>Snapshot
+import com.your.sourbase.features.<name>.data.model.<Name>Snapshot
 
 /** Source of the data needed by the <Name> destination. */
 interface <Name>Repository {
@@ -24,10 +24,10 @@ interface <Name>Repository {
 Plain implementation (no network yet — name it `InMemory<Name>Repository` while the data is faked):
 
 ```kotlin
-package com.lutech.pairpulse.features.<name>.data.repository
+package com.your.sourbase.features.<name>.data.repository
 
-import com.lutech.pairpulse.core.time.TimeProvider
-import com.lutech.pairpulse.features.<name>.data.model.<Name>Snapshot
+import com.your.sourbase.core.time.TimeProvider
+import com.your.sourbase.features.<name>.data.model.<Name>Snapshot
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -57,11 +57,11 @@ class <Name>RepositoryImpl @Inject constructor(
 ## `presentation/<Name>Contract.kt`
 
 ```kotlin
-package com.lutech.pairpulse.features.<name>.presentation
+package com.your.sourbase.features.<name>.presentation
 
-import com.lutech.pairpulse.core.base.UiEvent
-import com.lutech.pairpulse.core.base.UiState
-import com.lutech.pairpulse.core.ui.snackbar.UiText
+import com.your.sourbase.core.base.UiEvent
+import com.your.sourbase.core.base.UiState
+import com.your.sourbase.core.ui.snackbar.UiText
 
 /** Immutable state rendered by the <Name> destination. */
 data class <Name>UiState(
@@ -92,18 +92,18 @@ messages go through `SnackbarController`. UI-only models (`<X>UiModel`) and enum
 ## `presentation/<Name>ViewModel.kt`
 
 ```kotlin
-package com.lutech.pairpulse.features.<name>.presentation
+package com.your.sourbase.features.<name>.presentation
 
 import androidx.lifecycle.viewModelScope
-import com.lutech.pairpulse.R
-import com.lutech.pairpulse.core.base.AppViewModel
-import com.lutech.pairpulse.core.crashlytics.CrashReporter
-import com.lutech.pairpulse.core.logging.AppLog
-import com.lutech.pairpulse.core.ui.components.feedback.AppSnackbarType
-import com.lutech.pairpulse.core.ui.snackbar.SnackbarController
-import com.lutech.pairpulse.core.ui.snackbar.UiText
-import com.lutech.pairpulse.features.<name>.analytics.<Name>Tracker
-import com.lutech.pairpulse.features.<name>.data.repository.<Name>Repository
+import com.your.sourbase.R
+import com.your.sourbase.core.base.AppViewModel
+import com.your.sourbase.core.crashlytics.CrashReporter
+import com.your.sourbase.core.logging.AppLog
+import com.your.sourbase.core.ui.components.feedback.AppSnackbarType
+import com.your.sourbase.core.ui.snackbar.SnackbarController
+import com.your.sourbase.core.ui.snackbar.UiText
+import com.your.sourbase.features.<name>.analytics.<Name>Tracker
+import com.your.sourbase.features.<name>.data.repository.<Name>Repository
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -237,9 +237,9 @@ private fun <Name>ContentPreview() {
 ## `analytics/<Name>Tracker.kt` (mock — only once the feature has an event)
 
 ```kotlin
-package com.lutech.pairpulse.features.<name>.analytics
+package com.your.sourbase.features.<name>.analytics
 
-import com.lutech.pairpulse.core.logging.AppLog
+import com.your.sourbase.core.logging.AppLog
 import javax.inject.Inject
 
 /** Feature-level analytics for <Name>. Mocked until the official tracking spec exists. */
@@ -274,25 +274,47 @@ In unit tests, construct the real `<Name>Tracker()` — it has no dependencies.
     abstract fun bind<Name>Repository(impl: InMemory<Name>Repository): <Name>Repository
 ```
 
-`navigation/Routes.kt`:
+`features/<name>/presentation/<Name>Navigation.kt` (new per-feature file; routes + serializer module + entry DSL all live here):
 
 ```kotlin
+package com.your.sourbase.features.<name>.presentation
+import androidx.navigation3.runtime.EntryProviderScope
+import androidx.navigation3.runtime.NavBackStack
+import androidx.navigation3.runtime.NavKey
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.modules.SerializersModule
+import kotlinx.serialization.modules.polymorphic
+import kotlinx.serialization.modules.subclass
+
 /** Navigation key for the <Name> destination. */
-@Serializable
-data object <Name>Route : ScreenRoute {
-    override val screenName: String = "<name>"
+@Serializable data object <Name>Route : NavKey
+
+/** Polymorphic registrations for this feature. Add every @Serializable route above. */
+val <Name>RouteSerializers: SerializersModule = SerializersModule {
+    polymorphic(NavKey::class) {
+        subclass(<Name>Route::class, <Name>Route.serializer())
+    }
 }
 
-// and inside AppRouteSerializersModule — forgetting this crashes on state restore, not at compile time
-        subclass(<Name>Route::class, <Name>Route.serializer())
+/** Entries owned by this feature. AppNavGraph calls this once; no inline entry<> elsewhere. */
+fun EntryProviderScope<NavKey>.<name>Entries(stack: NavBackStack<NavKey>) {
+    entry<<Name>Route> {
+        <Name>Screen(onOpenSomething = { stack.add(SomethingRoute) })
+    }
+}
 ```
 
-`navigation/AppNavGraph.kt`, inside `entryProvider { }`:
+`navigation/Routes.kt` — chain the feature's serializer module into the composed `AppRouteSerializersModule`:
 
 ```kotlin
-                entry<<Name>Route> {
-                    <Name>Screen(onOpenSomething = { backStack.add(SomethingRoute) })
-                }
+val AppRouteSerializersModule: SerializersModule =
+    ExampleRouteSerializers + <Name>RouteSerializers // + more features...
+```
+
+`navigation/AppNavGraph.kt`, inside `entryProvider { }` — one line per feature:
+
+```kotlin
+                <name>Entries(stack)
 ```
 
 ---

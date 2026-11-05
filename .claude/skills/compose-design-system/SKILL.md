@@ -1,11 +1,11 @@
 ---
 name: compose-design-system
-description: Rules for writing, editing, or reviewing any Compose UI in this Android app — screens, shared components, previews, theming. Use whenever a task touches a @Composable under com.lutech.pairpulse (core/ui, ui/theme, features/*/presentation), adds a screen or component, translates a Figma design to Compose, styles text/colors/spacing/radii, wires a click or press animation, shows a snackbar, or reviews UI code for token/Material-3 violations. Covers the Material-role-first color rule (MaterialTheme.colorScheme, else ColorPrimitives directly; no LocalAppColors), the AppSpacing/AppShapes/AppMotion/LocalAppTypography token set, file-private component and icon sizes (no AppSizes), pull-to-refresh, overscrollEffect = null on every scrollable, mandatory click debouncing, the core/ui component catalog, the forbidden Material 3 components, the pressScale + rememberDebouncedClick interaction contract, the app-scoped snackbar, and preview/test requirements.
+description: Rules for writing, editing, or reviewing any Compose UI in this Android app — screens, shared components, previews, theming. Use whenever a task touches a @Composable under com.your.sourbase (core/ui, ui/theme, features/*/presentation), adds a screen or component, translates a Figma design to Compose, styles text/colors/spacing/radii, wires a click or press animation, shows a snackbar, or reviews UI code for token/Material-3 violations. Covers the Material-role-first color rule (MaterialTheme.colorScheme, else ColorPrimitives directly; no LocalAppColors), the AppSpacing/AppShapes/AppMotion/LocalAppTypography token set, file-private component and icon sizes (no AppSizes), pull-to-refresh, overscrollEffect = null on every scrollable, mandatory click debouncing, the core/ui component catalog, the forbidden Material 3 components, the pressScale + rememberDebouncedClick interaction contract, the app-scoped snackbar, and preview/test requirements.
 ---
 
 # Compose design system (core/ui + ui/theme)
 
-The shared design system lives in `app/src/main/java/com/lutech/pairpulse/core/ui` and `ui/theme`.
+The shared design system lives in `app/src/main/java/com/example/base/core/ui` and `ui/theme`.
 Feature code **consumes** it; it must never duplicate component geometry or inline raw
 palette/dimension values. `.ai-kb/design-system.md` is the prose reference — read it when a
 question here is unanswered, and update it when you change the system.
@@ -38,7 +38,7 @@ question here is unanswered, and update it when you change the system.
 10. **Every click is debounced.** See "Components, interaction and feedback" below.
 11. **Data screens support pull-to-refresh.** See "Pull-to-refresh" below.
 12. Runtime appearance is fixed light, English, portrait and fixed font scale. Retained dark
-   scheme definitions do not imply a selectable theme. See `.ai-kb/features/settings.md`.
+   scheme definitions do not imply a selectable theme.
 
 ## Which API do I use?
 
@@ -79,7 +79,7 @@ There is **no extended color object**. `LocalAppColors`, `AppExtendedColors`, `L
    returns a Material *baseline* color (`colorScheme.error` = `#B3261E`, not brand `Red500`) — map it
    in both schemes and add it to `ALLOWED_ROLES` first (`COLOR-ROLE`).
 2. **No role fits → `ColorPrimitives.<Ramp><Shade>` directly** in the UI code
-   (`import com.lutech.pairpulse.ui.theme.ColorPrimitives`), e.g. `ColorPrimitives.Green500`.
+   (`import com.your.sourbase.ui.theme.ColorPrimitives`), e.g. `ColorPrimitives.Green500`.
    It is the same color in both modes — accepted by design.
 3. **Must differ per mode but no role fits** → map the closest role in both schemes, or derive from a
    role (`colorScheme.onSurface.copy(alpha = 0.6f)`). Never branch on `isSystemInDarkTheme()` in UI code.

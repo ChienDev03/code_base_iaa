@@ -18,12 +18,20 @@ val backStack = rememberNavBackStack(
 - `SplashRoute` is the app start destination. Splash clears the stack and routes to Home, the intro,
   Login, or authenticated onboarding at `OnboardingNameRoute` when the account-scoped JSON draft is
   incomplete.
-- The `SavedStateConfiguration`/serializers-module argument is **required**. Routes are
-  `@Serializable` `NavKey`s in `navigation/Routes.kt`, registered polymorphically in
-  `AppRouteSerializersModule`.
-- **Add a new route → add `subclass(XRoute::class, XRoute.serializer())` to that module too.**
-  Skipping it compiles and runs fine until the OS kills the backgrounded process; saved-state
+- The `SavedStateConfiguration`/serializers-module argument is **required**. Each feature owns its
+  `@Serializable` `NavKey`s and its own `SerializersModule` (e.g. `ExampleRouteSerializers`) inside
+  `features/<name>/presentation/<Name>Navigation.kt`. `navigation/Routes.kt` only composes those
+  per-feature modules into the single `AppRouteSerializersModule`
+  (`ExampleRouteSerializers + <next feature>RouteSerializers + ...`).
+- **Add a new route → add `subclass(XRoute::class, XRoute.serializer())` inside that feature's own
+  `SerializersModule`, then chain the feature module into `AppRouteSerializersModule`.** Skipping
+  either side compiles and runs fine until the OS kills the backgrounded process; saved-state
   restoration then breaks silently.
+- Each feature also exposes one DSL extension — `fun EntryProviderScope<NavKey>.<name>Entries(stack, ...)`
+  in the same `<Name>Navigation.kt` — that contains every `entry<XRoute> { ... }` for that feature.
+  `AppNavGraph` calls `<name>Entries(...)` once inside `entryProvider { ... }` and never inlines
+  `entry<>` blocks itself. Co-locating the route type, the serializer subclass, and the entry block
+  removes the three-place wiring rot the old monolithic `AppNavGraph` suffered from.
 
 - `QuestionDetailRoute.entryPoint` is a serialized initial-loading hint (`QuestionDetailEntryPoint`):
   a list item's root `status == "completed"` selects `DISCUSSION`; other/missing statuses select

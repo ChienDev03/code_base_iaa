@@ -1,5 +1,5 @@
 # Base Example
-Neutral single-module Android starter: `com.example.base`, dev ID `com.example.base.dev`.
+Neutral single-module Android starter: `com.your.sourbase`, dev ID `com.your.sourbase.dev`.
 Offline demo requires no private SDK, Firebase config, environment secret or release signing.
 
 ## Quick start
@@ -24,14 +24,20 @@ are supplied. CI process environment wins. `DEMO_MODE=public` opts into JSONPlac
 `SANDBOX=true/false` is independent from debug/release. No API keys belong in BuildConfig.
 
 ## Rebrand/bootstrap (manual, reviewable)
+Fast path: `python3 scripts/change_bundle.py --new-package com.your.app --app-name "Your App" --dry-run`
+auto-detects the current namespace, previews every move/edit, then run without `--dry-run` to apply.
+See **Rename the bundle** below for scope and limits.
+
 1. Choose a new empty destination; copy only reviewed tracked starter source, never keys/caches/.git.
 2. Decide app name and namespace/application ID; edit app Gradle namespace/ID/resValue and move the
-   `com/example/base` source/test folders with IDE package refactoring. Review manifest component names.
+   `com/your/sourbase` source/test folders with IDE package refactoring (or run `change_bundle.py`).
+   Review manifest component names.
 3. Replace `BrandPalette` in `ui/theme/Theme.kt` and app-owned launcher. Check light/dark, contrast,
    disabled/pressed/error states. Keep generic primitives separate and fontScale=1f.
 4. Copy environment examples locally; select offline/public mode and independent sandbox values.
-5. Select integrations from `.ai-kb/integrations.md`. SDK presets are currently blocked pending
-   authorized playbooks/registry; no undocumented manual SDK enabling is claimed supported.
+5. Any optional integration (Firebase, PaymentKit, AdsKit, Clarity, Adjust…) stays absent by default.
+   SDK presets are blocked pending authorized playbooks/registry; no undocumented manual SDK enabling
+   is claimed supported.
 6. Dry-run the proposed edits with IDE preview/diff before applying. No global arbitrary replacement.
    Review packages/labels/provider/deep-link IDs, run static/compile/build/lint and inspect manifests/
    dependencies. Run tests only after explicit authorization. Do not overwrite signing identities.
@@ -53,8 +59,32 @@ are supplied. CI process environment wins. `DEMO_MODE=public` opts into JSONPlac
 `./gradlew bundleProductionRelease` produces an **unsigned**, minified AAB. Supply your own signing
 only for actual distribution; see keystore/README.md. Preserve mapping files for crash diagnosis.
 Unit/device/Maestro/benchmark execution needs explicit approval. No commit/publication is implied.
-Start at `.ai-kb/README.md`; `BASE_SOURCE_PLAN.md` records outstanding acceptance gates.
+Start at `.ai-kb/README.md`.
 
 Validated source state: debug APK and unsigned minified release AAB build, lint has no errors,
-6 Kotlin + 4 Python unit tests pass, UI tests compile but have not run. See BASE_SOURCE_PLAN.md
-for every checklist item's status, artifacts and remaining SDK/device/live-adapter prerequisites.
+Kotlin unit tests pass, UI tests compile but have not run.
+
+## Rename the bundle (`scripts/change_bundle.py`)
+In-place rename of namespace, applicationId, package folders and every textual reference.
+
+Usage:
+```bash
+python3 scripts/change_bundle.py --new-package <com.your.app> [--app-name "Your App"] [--dry-run]
+```
+
+| Flag | Effect |
+| --- | --- |
+| `--new-package` (required) | Target package, dot-separated lowercase segments. |
+| `--app-name` | Overwrites the `APP_NAME` fallback in `app/build.gradle.kts` and syncs `rootProject.name` in `settings.gradle.kts` with a slug of this name. |
+| `--dry-run` | Print the plan without touching files. Always start here. |
+
+Behavior:
+- Auto-detects the current package from `app/build.gradle.kts` (`namespace = "..."`).
+- Moves `app/src/{main,test,androidTest}/java/<old>/` → `<new>/`; prunes empty parent folders.
+- Rewrites both dotted (`com.old.pkg`) and path (`com/old/pkg`) references in every
+  `.kt .kts .xml .pro .md .sh`, skipping `build/`, `.gradle/`, `.idea/`, `node_modules/`, `.git/`.
+- `.claude/scripts/check-design-tokens.sh` auto-detects the namespace at runtime, so it follows
+  the rename without manual edits.
+
+Does **not** touch: signing/keystore, `google-services.json`, `.env*`, manifest component names
+beyond the package replacement, Gradle sync. After applying, run `./gradlew clean && ./gradlew :app:assembleDevDebug` to verify.
