@@ -1,9 +1,7 @@
 # Base repository workflow
 Read `.ai-kb/README.md`, then only the owning topic. User instructions govern execution.
-Before any coding task, apply `.claude/skills/regression-prevention/SKILL.md` and select checklist IDs.
-For feature implementation/review, dependencies, startup/async/navigation/list/image/media/service or
-release changes, also apply `.claude/skills/performance-and-reliability/SKILL.md` before editing.
 Canonical skills are under `.claude/skills`; preserve `.agents/skills` symlink aliases.
+Available skills: `architecture`, `compose-design-system`, `feature-scaffold`, `navigation-3`.
 
 Single :app, feature-first UDF. Core never imports features except core/di/RepositoryModule.
 Composable state is immutable; ViewModels depend on repository interfaces. UI <500 lines; VM <1000.

@@ -34,10 +34,10 @@ fun quoted(value: String): String = "\"" + value.flatMap { character ->
 }.joinToString("") + "\""
 
 android {
-    namespace = "com.example.base"
+    namespace = "com.your.sourbase"
     compileSdk = 37
     defaultConfig {
-        applicationId = "com.example.base"
+        applicationId = "com.your.sourbase"
         minSdk = 26
         targetSdk = 36
         versionCode = providers.gradleProperty("releaseVersionCode").orNull?.toIntOrNull() ?: 1
@@ -59,7 +59,7 @@ android {
                 buildConfigField("String", "ENVIRONMENT", quoted(environment))
                 buildConfigField("String", "DEMO_MODE", quoted(mode))
                 buildConfigField("boolean", "SANDBOX", boolean(config.value("SANDBOX", (environment == "dev").toString())).toString())
-                resValue("string", "app_name", config.value("APP_NAME", if (environment == "dev") "Base Example [DEV]" else "Base Example"))
+                resValue("string", "app_name", config.value("APP_NAME", "sour-base"))
             }
         }
     }

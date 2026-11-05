@@ -1,14 +1,14 @@
 ---
 name: feature-scaffold
-description: Add a new feature vertical (screen/destination) to this Android app the way the existing ones are built. Use when a task asks to create a new screen, feature, tab, flow or Navigation 3 destination under com.lutech.pairpulse.features, replace a destination explicitly confirmed to be a placeholder, or wire a new repository + ViewModel + route + Hilt binding + tests end to end. Covers the exact package layout, the AppViewModel/UiState/UiEvent contract, Hilt binding placement in core/di/RepositoryModule, Routes.kt + AppRouteSerializersModule + AppNavGraph wiring, the hand-rolled-fake test convention, and the required .ai-kb documentation update.
+description: Add a new feature vertical (screen/destination) to this Android app the way the existing ones are built. Use when a task asks to create a new screen, feature, tab, flow or Navigation 3 destination under com.your.sourbase.features, replace a destination explicitly confirmed to be a placeholder, or wire a new repository + ViewModel + route + Hilt binding + tests end to end. Covers the exact package layout, the AppViewModel/UiState/UiEvent contract, Hilt binding placement in core/di/RepositoryModule, per-feature <Name>Navigation.kt (routes + serializer module + entry DSL) composed into AppRouteSerializersModule and AppNavGraph, the hand-rolled-fake test convention, and the required .ai-kb documentation update.
 ---
 
 # Scaffold a feature vertical
 
 Feature-first single module, Google UDF layers: **UI → Data**. A `domain/` layer is added **only**
-when logic is reused or must leave an oversized ViewModel (for example
-`features/connect/domain/`) (`AnswerSubmitter`), so do not create one speculatively. The **architecture** skill is the deep-dive reference; `features/home` is the closest
-complete model to copy (`features/premium` is the model for a repository with real side effects).
+when logic is reused or must leave an oversized ViewModel, so do not create one speculatively. The
+**architecture** skill is the deep-dive reference; `features/example` is the starter model to copy
+(interface + in-memory repository, Hilt binding, Navigation 3 entry, unit + instrumented tests).
 
 ## 1. Package layout
 
@@ -23,12 +23,12 @@ features/<name>/
     ├── <Name>Contract.kt               // UiState + UiEvent + Callbacks (+ UI-only enums/models)
     ├── <Name>ViewModel.kt              // @HiltViewModel, extends AppViewModel
     ├── <Name>Screen.kt                 // stateful <Name>Screen + stateless <Name>Content + @AppPreviews
+    ├── <Name>Navigation.kt             // @Serializable routes + <Name>RouteSerializers + EntryProviderScope<NavKey>.<name>Entries(...)
     └── components/                      // feature-private composables (only if the screen needs them)
 analytics/<Name>Tracker.kt              // (under features/<name>/) feature-owned tracker, added with the first event only
 ```
 
-Presentation-only features are legitimate when they need no repository. Auth currently has a real
-data layer; do not use it as a no-data example.
+Presentation-only features are legitimate when they need no repository.
 
 ## 2. Write the code
 
@@ -61,25 +61,33 @@ Non-negotiables:
 - All UI follows the **compose-design-system** skill (tokens, `core/ui` catalog, no Material 3
   `Button`/`TextField`/`AssistChip`). Read it before writing the screen.
 
-## 3. Wire it up (four files, easy to forget)
+## 3. Wire it up (three files, easy to forget)
 
 1. `core/di/RepositoryModule.kt` — add `@Binds abstract fun bind<Name>Repository(impl: <Impl>): <Name>Repository`.
    Repository bindings go **only** here; `CoreModule`/`ApiModule`/`DataStoreModule`/`TimeModule` are
    for infrastructure `@Provides`.
-2. `navigation/Routes.kt` — add `@Serializable data object <Name>Route : ScreenRoute` with a
-   snake_case `screenName` (that string is what reaches analytics).
-3. `navigation/Routes.kt` → `AppRouteSerializersModule` — add
-   `subclass(<Name>Route::class, <Name>Route.serializer())`. **Omitting this crashes on state
-   restore, not at compile time.**
-4. `navigation/AppNavGraph.kt` — add `entry<<Name>Route> { <Name>Screen(...) }`. If it replaces a
-   placeholder, delete the `PlaceholderScreen` entry and its `R.string.placeholder_*` string.
-   Screens take `hiltViewModel()` — `viewModel()` does not work with Navigation 3 entries here.
+2. `features/<name>/presentation/<Name>Navigation.kt` — the feature's own navigation file. It owns
+   three things so a feature's routes + entries live in one place (no cross-feature edits later):
+   - `@Serializable data object <Name>Route : NavKey` (or data class with route args). Route types
+     stay in the feature's package, not `navigation/`.
+   - `val <Name>RouteSerializers: SerializersModule = SerializersModule { polymorphic(NavKey::class)
+     { subclass(<Name>Route::class, <Name>Route.serializer()); ... } }` — every route in the file
+     listed here. **Omitting a `subclass` crashes on state restore, not at compile time.**
+   - `fun EntryProviderScope<NavKey>.<name>Entries(stack: NavBackStack<NavKey>, ...) { entry<<Name>Route> { <Name>Screen(...) }; ... }`
+     — every `entry<>` for this feature, plus any back-stack mutation lambdas. Screens take
+     `hiltViewModel()` — `viewModel()` does not work with Navigation 3 entries here.
+3. `navigation/Routes.kt` → `AppRouteSerializersModule` — chain the new module in with `+`:
+   `ExampleRouteSerializers + <Name>RouteSerializers + ...`.
+4. `navigation/AppNavGraph.kt` — inside `entryProvider { ... }` add one line:
+   `<name>Entries(stack, ...)`. That is the only edit per feature; no inlined `entry<>` blocks.
+   If it replaces a placeholder, delete that feature's `<Name>Entries(...)` call and strings.
    If the destination is a bottom-bar tab, also add it to `AppTab` in `navigation/NavigationBar.kt`;
    if it must hide the bottom bar (like Paywall/Login), extend that condition in `AppNavGraph`.
 
-Navigation happens by mutating the back stack in `AppNavGraph`: `backStack.add(route)`,
-`backStack.removeLastOrNull()`, or `backStack.clear()` + `add(route)` for a root replacement.
-Screens never own the back stack — they expose `onX: () -> Unit` lambdas.
+Navigation happens by mutating the back stack from inside each feature's `<name>Entries` lambdas:
+`stack.add(route)`, `stack.removeLastOrNull()`, or `stack.clear()` + `add(route)` for a root
+replacement. Screens never own the back stack — they expose `onX: () -> Unit` lambdas that the
+navigation file closes over.
 
 ## 4. Strings and resources
 
@@ -105,7 +113,7 @@ Tests are run manually — list these commands and ask the user before running a
 (a compile check `./gradlew compileDevDebugKotlin` is fine without asking):
 
 ```bash
-./gradlew testDevDebugUnitTest --tests "com.lutech.pairpulse.features.<name>.*"
+./gradlew testDevDebugUnitTest --tests "com.your.sourbase.features.<name>.*"
 ./gradlew connectedDevDebugAndroidTest    # needs a device/emulator
 ./gradlew assembleDevDebug
 ```
@@ -113,7 +121,7 @@ Tests are run manually — list these commands and ask the user before running a
 ## 6. Documentation (mandatory, per AGENTS.md)
 
 1. Create `.ai-kb/features/<name>.md` — UDF state, data source, actions/events, and any temporary
-   fake-data boundary. Follow the shape of `.ai-kb/features/home.md`.
+   fake-data boundary. Follow the shape of the existing feature docs under `.ai-kb/features/`.
 2. Link it from `.ai-kb/README.md`.
 3. Add a dated entry to `.ai-kb/CHANGELOG.md`, and tell the user the changelog was updated.
 4. If the vertical changes an architecture pattern (new DI module, new base type, new nav shape),

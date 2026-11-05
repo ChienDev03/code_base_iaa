@@ -1,16 +1,15 @@
 ---
 name: architecture
-description: The architecture rules and non-obvious invariants of this Android app (com.lutech.pairpulse) — read before adding, moving, or refactoring anything outside a single file's body. Use when a task touches Navigation 3 routes or the back stack, Hilt/DI module placement, the core/ vs features/ boundary, core/network and the backend response envelopes, core/base (AppViewModel/AppRepository), one-shot events and the app-scoped snackbar, analytics/attribution/consent gating, or the testing conventions; also when deciding where a new file belongs, or answering "how does X work here". Replaces the former .ai-kb/architecture.md.
+description: The architecture rules and non-obvious invariants of this Android app (com.your.sourbase) — read before adding, moving, or refactoring anything outside a single file's body. Use when a task touches Navigation 3 routes or the back stack, Hilt/DI module placement, the core/ vs features/ boundary, core/network and the backend response envelopes, core/base (AppViewModel/AppRepository), one-shot events and the app-scoped snackbar, analytics/attribution/consent gating, or the testing conventions; also when deciding where a new file belongs, or answering "how does X work here". Replaces the former .ai-kb/architecture.md.
 ---
 
 # Architecture
 
 Feature-first, single Gradle module (`:app`), Google UDF layers: **UI (Compose + ViewModel) → Data
 (Repository)**. A `domain/` layer is added only when logic is reused across ViewModels or must be
-pulled out of an oversized ViewModel (for example `features/connect/domain/`)
-(`AnswerSubmitter`: media upload + answer submit, plus question-choice helpers); do not create one
-speculatively. The current app uses one Gradle module and feature-first boundaries. The
-package-layout reference owns the structural map; do not introduce modules speculatively.
+pulled out of an oversized ViewModel; do not create one speculatively. The current app uses one
+Gradle module and feature-first boundaries. The package-layout reference owns the structural map;
+do not introduce modules speculatively.
 
 ## Invariants — never violate these
 
@@ -40,8 +39,8 @@ package-layout reference owns the structural map; do not introduce modules specu
 12. **Complex business functions log with `AppLog.d`** (debug-only) — action entry, result, error
     branch; small UI functions (stateless composables, formatters, trivial mappers) may skip it.
     Never tokens, bodies, or personal data.
-13. **Don't assume a file follows the base classes** — `features/premium` predates `core/base` and
-    was intentionally left un-migrated. Read the file before assuming the pattern.
+13. **Don't assume every file follows the base classes** — legacy features may predate `core/base`
+    and be intentionally left un-migrated. Read the file before assuming the pattern.
 14. **File size limits** — UI files < 500 lines, ViewModels < 1000 lines of logic. Split UI into
     sibling section files; move ViewModel logic into repositories, use cases (`domain/`), or helpers.
 

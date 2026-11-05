@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Design-system token check for com.lutech.pairpulse Compose code.
+# Design-system token check for the Compose code in this app.
 # Rules are documented in .claude/skills/compose-design-system/SKILL.md.
 #
 # Usage:
@@ -15,7 +15,16 @@ set -uo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 ROOT="$(cd "$SCRIPT_DIR/../.." && pwd)"
-SRC="$ROOT/app/src/main/java/com/lutech/pairpulse"
+
+# Auto-detect the application namespace from app/build.gradle.kts so this script
+# follows scripts/change_bundle.py renames without manual edits.
+NAMESPACE="$(sed -n 's/^[[:space:]]*namespace[[:space:]]*=[[:space:]]*"\([^"]*\)".*/\1/p' "$ROOT/app/build.gradle.kts" | head -n1)"
+if [ -z "${NAMESPACE:-}" ]; then
+  echo "check-design-tokens: could not detect namespace in app/build.gradle.kts" >&2
+  exit 2
+fi
+NAMESPACE_PATH="$(echo "$NAMESPACE" | tr '.' '/')"
+SRC="$ROOT/app/src/main/java/$NAMESPACE_PATH"
 THEME_DIR="$SRC/ui/theme"
 BASELINE="$SCRIPT_DIR/design-tokens-baseline.txt"
 

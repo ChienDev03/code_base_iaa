@@ -16,5 +16,5 @@ dependencyResolutionManagement {
         }
     }
 }
-rootProject.name = "base-source"
+rootProject.name = "sour-base"
 include(":app")
