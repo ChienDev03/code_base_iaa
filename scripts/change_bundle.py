@@ -7,7 +7,7 @@ Usage:
 The current package is auto-detected from app/build.gradle.kts (`namespace = "..."`).
 Operations:
   * Rewrite `namespace`/`applicationId` in app/build.gradle.kts.
-  * Move Kotlin sources from <old>/ to <new>/ under app/src/{main,test,androidTest}/java.
+  * Move Kotlin sources from <old>/ to <new>/ under app/src/{main,local,firebase,test,androidTest}/java.
   * Replace package / import references across .kt, .kts, .xml, .pro, .md, .sh
     (both dotted form `com.old.pkg` and path form `com/old/pkg`).
   * Optionally replace the default `app_name` fallback inside app/build.gradle.kts
@@ -23,7 +23,13 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 APP_GRADLE = ROOT / "app/build.gradle.kts"
 SETTINGS_GRADLE = ROOT / "settings.gradle.kts"
-SOURCE_ROOTS = [ROOT / "app/src/main/java", ROOT / "app/src/test/java", ROOT / "app/src/androidTest/java"]
+SOURCE_ROOTS = [
+    ROOT / "app/src/main/java",
+    ROOT / "app/src/local/java",
+    ROOT / "app/src/firebase/java",
+    ROOT / "app/src/test/java",
+    ROOT / "app/src/androidTest/java",
+]
 SCAN_SUFFIXES = {".kt", ".kts", ".xml", ".pro", ".md", ".sh"}
 EXCLUDED_DIRS = {"build", ".gradle", ".idea", "node_modules", ".git"}
 PACKAGE_RE = re.compile(r"^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$")

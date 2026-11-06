@@ -5,7 +5,7 @@ description: Rules for writing, editing, or reviewing any Compose UI in this And
 
 # Compose design system (core/ui + ui/theme)
 
-The shared design system lives in `app/src/main/java/com/example/base/core/ui` and `ui/theme`.
+The shared design system lives in `app/src/main/java/com/your/sourbase/core/ui` and `ui/theme`.
 Feature code **consumes** it; it must never duplicate component geometry or inline raw
 palette/dimension values. `.ai-kb/design-system.md` is the prose reference — read it when a
 question here is unanswered, and update it when you change the system.
@@ -137,9 +137,9 @@ No exceptions — screens, previews, sheets, dialogs, shared components. Enforce
 
 ### Pull-to-refresh
 
-- Every screen that shows loaded data (repository- or network-backed) wraps its scrollable content in
-  the shared `core/ui/components/refresh/AppPullToRefreshBox`. Screens with no loadable data (Login,
-  static Settings, placeholders) are exempt.
+- Every screen that shows repository-loaded local data wraps its scrollable content in
+  the shared `core/ui/components/refresh/AppPullToRefreshBox`. Screens with no loadable data
+  (static Settings, placeholders) are exempt.
 - `isRefreshing` is separate from the first load: first load shows the skeleton; a refresh keeps the
   current content and shows only the indicator.
 - The ViewModel's `onRefresh()` reloads without clearing existing data; a refresh failure keeps the old
@@ -155,7 +155,7 @@ already debounce. Never debounce `onValueChange`. Supply action semantics and di
 preview animations with `LocalInspectionMode`.
 
 One app-scoped `SnackbarController`/host owns unresolved `UiText` messages through buffered Channels.
-Errors use backend-first `toUiText`; never render exception text. Identical pending/showing messages
+Errors use localized feature then generic fallback; never render exception text. Identical pending/showing messages
 are suppressed for the renderer job's lifetime. Different messages replace immediately (latest wins).
 `afterCurrent = true` explicitly queues ordered feedback; a later default message cancels the active
 and queued chain. Preserve these rules when changing feedback; the reference includes API examples.
@@ -164,7 +164,7 @@ and queued chain. Preserve these rules when changing feedback; the reference inc
 
 **Run the token check only after UI work** — a UI feature or a UI bug fix (files under
 `features/*/presentation`, `core/ui`, `ui/theme`, `navigation`, or any file with `@Composable`).
-Skip it for non-UI changes (data, DI, network, tests, docs, Gradle) and for trivial edits that don't
+Skip it for non-UI changes (data, DI, database, tests, docs, Gradle) and for trivial edits that don't
 touch rendering, and say in the summary that it was skipped. The `PostToolUse` hook applies the same
 filter automatically. It enforces typography API, unconfigured `colorScheme` roles, `LocalAppColors`
 usage, raw hex, inline `RoundedCornerShape`, forbidden Material 3 components, `viewModel()`, inline

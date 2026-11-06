@@ -24,7 +24,7 @@ remote configuration changes, publication and uploads are not performed by impor
   `savedStateHandle` flag below is a reference pattern, not a requirement to change navigation APIs.
 
 Related contracts: [App update](app_update_specification.md),
-[Core modules](../core_modules_specification.md), [Premium and subscriptions](premium.md).
+[Core modules](../core_modules_specification.md), [Firebase](../firebase.md).
 
 ---
 
@@ -47,12 +47,11 @@ flowchart TD
     end
 
     subgraph Feature-Level Triggers: Optional / Custom
-        TP2[Post-Subscription / Paywall Success]
-        TP3[Core Action Completed / Back Navigation]
-        TP4[High-Value User Engagement]
+        TP2[Core Action Completed / Back Navigation]
+        TP3[High-Value User Engagement]
     end
     
-    TP1 & TP2 & TP3 & TP4 --> |LocalReviewManager.current.requestReview activity| ReviewManager[ReviewManager Singleton]
+    TP1 & TP2 & TP3 --> |LocalReviewManager.current.requestReview activity| ReviewManager[ReviewManager Singleton]
     
     ReviewManager --> |Check shownThisSession & isRated| CanShow{canShowReview?}
     CanShow -- No --> Ignore[Do Nothing / Silent Exit]
@@ -340,18 +339,12 @@ LaunchedEffect(isVisible, state.isUpdateCheckCompleted, state.updateDialog) {
 
 Các tính năng cụ thể trong ứng dụng mới khi phát triển có thể gắn thêm lời gọi Rating nếu phù hợp với hành trình người dùng (khoảnh khắc hài lòng / Happy Moments):
 
-#### 1. Sau khi hoàn thành đăng ký / Mua gói (Post-Subscription / Monetization Success)
-- **Kịch bản:** Khi người dùng thanh toán hoặc kích hoạt thành công một dịch vụ / gói cước và quay trở lại màn hình chính.
-- **Pattern thực hiện:**
-  - Gán cờ `trigger_review = true` vào `savedStateHandle` khi đóng màn hình Paywall.
-  - Tại màn hình tiếp nhận, đọc cờ, xóa cờ và gọi `reviewManager.requestReview(activity)` sau một khoảng delay ngắn (`delay(500)`).
-
-#### 2. Sau khi hoàn thành hành động cốt lõi (Core Feature Action Success)
+#### 1. Sau khi hoàn thành hành động cốt lõi (Core Feature Action Success)
 - **Kịch bản:** Người dùng tạo mới dữ liệu, xuất file, chỉnh sửa thành công và nhấn quay về (Back) danh sách.
 - **Pattern thực hiện:**
   - Khi pop backstack hoặc nhận event thành công, khởi chạy Coroutine kèm `delay(500)` trước khi gọi `requestReview(activity)` để tránh xung đột với animation chuyển màn hình.
 
-#### 3. Sau khi tương tác giá trị cao (High-Value Engagement / Milestone)
+#### 2. Sau khi tương tác giá trị cao (High-Value Engagement / Milestone)
 - **Kịch bản:** Người dùng hoàn thành một nhiệm vụ, đạt mốc sử dụng (streak, lưu bookmark, thêm vào danh sách ưu thích,...).
 - **Pattern thực hiện:**
   - Lắng nghe One-shot Event từ ViewModel hoặc sự kiện đóng BottomSheet/Dialog để kích hoạt `reviewManager.requestReview(activity)`.

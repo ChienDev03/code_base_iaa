@@ -12,7 +12,7 @@ Keep root fontScale=1f and density unchanged. One shell snackbar, lifecycle-awar
 Routes are small serializable NavKeys registered in AppRouteSerializersModule; Hilt per-entry stores.
 Inject clocks/dispatchers. Propagate cancellation and reject stale context results. No personal data logs.
 Confirm new first-load/refresh/paging/action/retry/offline UX before implementation. Preserve approved
-behavior. Error precedence details messages -> backend message -> feature -> generic; no exception text.
+behavior. Errors use localized feature -> generic fallback; no exception text or stored data.
 Optional SDKs must be absent from disabled dependencies/manifests, not merely disabled at runtime.
 No unapproved analytics events. Never read/copy secret files or source keys/Firebase configs.
 

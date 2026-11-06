@@ -32,6 +32,10 @@ SDK placement ID and format. Banner size is a UI choice, not another product fea
 
 ## Remote Config: `ads_config`
 
+The RemoteSettings adapter now provides this key through Firebase or SDK-free defaults.
+Bundled defaults contain empty placement arrays. The parser and AdsKit adapter are not installed.
+A refresh must never block local financial data access.
+
 Reference flat payload:
 
 ```json
@@ -52,7 +56,7 @@ Reference sequence:
 ```text
 read local units → validate App ID → fetchAndActivate remote config
 → decode ads_config → map PlacementSpec → register AdsKit config
-→ publish resolved placements → apply entitlement/consent readiness
+→ publish resolved placements → apply consent/host readiness
 ```
 
 Fetch failure can read activated cache/defaults. Distinguish invalid JSON from explicitly disabled
@@ -62,7 +66,7 @@ failure; document and approve that fallback before using it in another app.
 `enabledPlacements: StateFlow<Set<AdPlacement>>` plus
 `isPlacementConfigLoaded: StateFlow<Boolean>` distinguish unresolved from resolved-empty config.
 A pending action waits only under its current owner and ignores duplicates; cancellation releases
-busy state. Confirm whether disabled rewarded placements show an alternate action or a paywall.
+busy state. Confirm the local alternate action for disabled rewarded placements; never grant an unearned reward.
 
 ## Sandbox and test devices
 
@@ -81,7 +85,7 @@ and manifest entries entirely.
 2. Add its `PlacementSpec` format/config mapping.
 3. Add the remote config entry if remote control is used.
 4. Handle unresolved, disabled and unavailable placement states in the feature owner.
-5. Wire confirmed premium eligibility, consent and usable host checks.
+5. Wire app policy, consent and usable host checks.
 6. Verify disabled/enabled dependency and manifest variants with authorized checks.
 
 This is documentation of configuration mechanics, not authorization to publish remote values.

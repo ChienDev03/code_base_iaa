@@ -23,14 +23,14 @@ is inherited by this base.
 ## State and interaction
 
 - Use immutable composable state and repository interfaces at the ViewModel boundary.
-- Separate first-load state from refresh and paging. Confirm empty, retry, offline and failure UX
+- Separate first-load state from refresh and paging. Confirm empty, retry and failure UX
   before adding a flow; pull-to-refresh is not a universal requirement for every screen.
 - Debounce clicks and claim in-flight operations synchronously. Guard conflicting actions,
   cancellation, dismissal and callbacks after owner destruction.
 - Use one shell snackbar host and lifecycle-aware buffered effects. Avoid duplicate delivery
   after recomposition or navigation. Features keep their strings separate.
-- Error copy precedence: joined `details[].message`, then backend `message`, then feature fallback,
-  then generic fallback. Never show exception text or raw response bodies.
+- Local failures use localized feature fallback, then generic fallback.
+  Never show exception text, SQL diagnostics or stored personal data.
 - Keep routes small serializable NavKeys registered in `AppRouteSerializersModule`; scope Hilt
   ViewModels to navigation entries. Preserve drafts and approved Back behavior.
 
@@ -38,7 +38,7 @@ is inherited by this base.
 
 Bound decode memory, concurrent work, cache lifetime and player resources. Release resources on
 owner disposal, propagate cancellation and reject results for replaced selections or old contexts.
-Previews must not start network, video or decorative infinite playback. Reuse shared components
+Previews must not start video or decorative infinite playback. Reuse shared components
 where they exist; do not describe a component as available without checking source.
 
 ## Verification
@@ -71,8 +71,7 @@ Reference shared component responsibilities, when the consuming app has them:
 | `AppButton` / `AppIconButton` | Consistent press feedback and debounced clicks |
 | Shell `AppSnackbar` host | Shared messages, insets and one-shot delivery |
 | `AppPullToRefreshBox` | Refresh interaction separate from initial load |
-| `AppNetworkImage` | Loading/error slots and cache-aware rendering |
-| `AppAvatarCropEditor` | Crop placement draft and gesture/rendering boundary |
+| `AppImage` | Painter-based local image rendering |
 | `AppAnimationVideo` | Muted playback, poster handoff and player disposal |
 
 These are reuse references, not instructions to recreate old onboarding, chat, widget or branded

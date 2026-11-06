@@ -1,90 +1,58 @@
-# Base Example
-Neutral single-module Android starter: `com.your.sourbase`, dev ID `com.your.sourbase.dev`.
-Offline demo requires no private SDK, Firebase config, environment secret or release signing.
+# Local Android base
 
-## Quick start
-Use Android Studio with JDK 17+ as the launcher (the pinned daemon uses JDK 25) and SDK 37 (existing wrapper uses Gradle 9.4.1 / AGP 9.2.1).
-Set ANDROID_HOME to your SDK or create ignored local.properties yourself.
-Open the **base-source root folder**, sync Gradle, then select `app` in **Build Variants**:
-`devDebug` for development or `productionDebug` for production configuration with debugging enabled.
-Select the shared `app` run configuration and a device, then Run/Debug. If variants are missing,
-resolve the first Gradle Sync error; both flavors are declared in `app/build.gradle.kts`.
-In Settings > Build Tools > Gradle, use the Android Studio bundled JDK / `GRADLE_LOCAL_JAVA_HOME`.
-The wrapper daemon criteria select JDK 25; allow its download or install that JDK locally.
+Single-module Kotlin/Compose Android base: `com.your.sourbase` and dev ID `com.your.sourbase.dev`.
+Financial data stays on-device in Room/SQLite. DataStore owns small preferences.
+Ads and optional Firebase services may use the internet independently of local data access.
 
-Run `./gradlew assembleDevDebug`; install with `./gradlew installDevDebug`.
-On macOS terminals without a configured Java runtime, use `./scripts/gradle.sh assembleDevDebug`;
-the helper prefers an explicit JAVA_HOME and otherwise uses Android Studio's bundled runtime.
-Build both debug variants with `./scripts/gradle.sh assembleDevDebug assembleProductionDebug`.
-Development uses `.dev`, version suffix `-dev` and label `Base Example [DEV]`; production keeps
-the base identity. Both debug variants use Android's generated debug signing, never source-app keys.
-`APP_NAME` optionally overrides the label. `-PreleaseVersionCode=123` overrides the version code.
-Default mode is offline. Optional local filenames: `.env.dev`, `.env.production`; sanitized examples
-are supplied. CI process environment wins. `DEMO_MODE=public` opts into JSONPlaceholder read-only API.
-`SANDBOX=true/false` is independent from debug/release. No API keys belong in BuildConfig.
+## Build
 
-## Rebrand/bootstrap (manual, reviewable)
-Fast path: `python3 scripts/change_bundle.py --new-package com.your.app --app-name "Your App" --dry-run`
-auto-detects the current namespace, previews every move/edit, then run without `--dry-run` to apply.
-See **Rename the bundle** below for scope and limits.
+Use the Gradle wrapper with the existing SDK 37 setup. The daemon criteria pin JDK 25.
+On Windows: `./gradlew.bat assembleDevDebug assembleProductionDebug lintDevDebug`.
+Android Studio: select `devDebug` or `productionDebug` and the shared app run configuration.
+Release bundles remain unsigned unless the owner supplies signing configuration.
+`SANDBOX` controls the eventual ads test policy; it is independent of the build type.
+Optional `.env.dev` / `.env.production` configure SANDBOX and APP_NAME; CI values take precedence.
 
-1. Choose a new empty destination; copy only reviewed tracked starter source, never keys/caches/.git.
-2. Decide app name and namespace/application ID; edit app Gradle namespace/ID/resValue and move the
-   `com/your/sourbase` source/test folders with IDE package refactoring (or run `change_bundle.py`).
-   Review manifest component names.
-3. Replace `BrandPalette` in `ui/theme/Theme.kt` and app-owned launcher. Check light/dark, contrast,
-   disabled/pressed/error states. Keep generic primitives separate and fontScale=1f.
-4. Copy environment examples locally; select offline/public mode and independent sandbox values.
-5. Any optional integration (Firebase, PaymentKit, AdsKit, Clarity, Adjust…) stays absent by default.
-   SDK presets are blocked pending authorized playbooks/registry; no undocumented manual SDK enabling
-   is claimed supported.
-6. Dry-run the proposed edits with IDE preview/diff before applying. No global arbitrary replacement.
-   Review packages/labels/provider/deep-link IDs, run static/compile/build/lint and inspect manifests/
-   dependencies. Run tests only after explicit authorization. Do not overwrite signing identities.
+## Included
 
-## Opt-in matrix
-| Capability | Default | Enabled path |
-| --- | --- | --- |
-| Offline example | Enabled | No configuration |
-| Public sample API | Disabled | DEMO_MODE=public; network failure remains visible |
-| DataStore settings | Available | Local only; no sensitive entitlement cache |
-| Room / images / media / work | Absent | Add only with a justified feature + lifecycle contract |
-| PaymentKit / AdsKit | Absent | Blocked pending registry/playbooks and app contracts |
-| Firebase services | Absent | Separate integration selection and provider/plugin review required |
-| Release handoff | Dry-run only | Live adapter/schema not yet configured |
+- Compose design system, Navigation 3, Hilt, immutable ViewModel state and buffered effects.
+- Room database, categories, budgets, transactions, computed budget totals and local repository.
+- Integer minor-unit money, Unix-second timestamps, foreign keys, schema export, WAL.
+- DataStore settings, injected clock/dispatchers, safe local failure results.
+- AdsManager boundary and lifecycle/configuration documentation. No ads SDK is installed yet.
+- Firebase Analytics, Crashlytics and Remote Config adapters behind `-PenableFirebase=true`.
+- Rating and update reference contracts; their UI flows are not implemented.
+- Existing CircleCI/Fastlane/distribution scripts retained unchanged.
 
-## Validation/release
-`./gradlew compileDevDebugKotlin assembleDevDebug lintDevDebug`
-`./gradlew :app:dependencies --configuration devDebugRuntimeClasspath`
-`./gradlew bundleProductionRelease` produces an **unsigned**, minified AAB. Supply your own signing
-only for actual distribution; see keystore/README.md. Preserve mapping files for crash diagnosis.
-Unit/device/Maestro/benchmark execution needs explicit approval. No commit/publication is implied.
-Start at `.ai-kb/README.md`.
+The example screen still renders neutral local demo items. Financial storage is available through
+`LedgerRepository`; no financial screens or sample financial records are generated.
 
-Validated source state: debug APK and unsigned minified release AAB build, lint has no errors,
-Kotlin unit tests pass, UI tests compile but have not run.
+## Firebase
 
-## Rename the bundle (`scripts/change_bundle.py`)
-In-place rename of namespace, applicationId, package folders and every textual reference.
+The default build has no Firebase runtime dependencies or providers.
+To enable, supply your own ignored `app/src/dev/google-services.json` and
+`app/src/production/google-services.json` for the respective application IDs, then build with
+`-PenableFirebase=true`. Do not copy another app's configuration.
 
-Usage:
-```bash
-python3 scripts/change_bundle.py --new-package <com.your.app> [--app-name "Your App"] [--dry-run]
-```
+Analytics and crash collection default to disabled. The product can use `TelemetryControl` after
+its collection policy is decided. No product events are approved or emitted in this starter.
+RemoteSettings provides immediate cached/default values and an explicit best-effort refresh;
+startup and database operations never wait for it. No financial values are passed to these services.
+See [.ai-kb/firebase.md](.ai-kb/firebase.md).
 
-| Flag | Effect |
-| --- | --- |
-| `--new-package` (required) | Target package, dot-separated lowercase segments. |
-| `--app-name` | Overwrites the `APP_NAME` fallback in `app/build.gradle.kts` and syncs `rootProject.name` in `settings.gradle.kts` with a slug of this name. |
-| `--dry-run` | Print the plan without touching files. Always start here. |
+## Local database and migration
 
-Behavior:
-- Auto-detects the current package from `app/build.gradle.kts` (`namespace = "..."`).
-- Moves `app/src/{main,test,androidTest}/java/<old>/` → `<new>/`; prunes empty parent folders.
-- Rewrites both dotted (`com.old.pkg`) and path (`com/old/pkg`) references in every
-  `.kt .kts .xml .pro .md .sh`, skipping `build/`, `.gradle/`, `.idea/`, `node_modules/`, `.git/`.
-- `.claude/scripts/check-design-tokens.sh` auto-detects the namespace at runtime, so it follows
-  the rename without manual edits.
+See [.ai-kb/local-storage.md](.ai-kb/local-storage.md). Room schema JSON under `app/schemas` is
+versioned source. Future schema changes need a version increment and explicit migration.
+No destructive fallback is enabled. No existing database import is assumed.
+Cloud backup/device transfer remain disabled by the existing manifest policy.
 
-Does **not** touch: signing/keystore, `google-services.json`, `.env*`, manifest component names
-beyond the package replacement, Gradle sync. After applying, run `./gradlew clean && ./gradlew :app:assembleDevDebug` to verify.
+## Verification and maintenance
+
+`./gradlew.bat :app:dependencies --configuration devDebugRuntimeClasspath`
+inspects the selected runtime graph. Build/lint/compile are allowed. Unit, device, Maestro and
+benchmark execution require explicit authorization; compiling test sources does not run them.
+Start at [.ai-kb/README.md](.ai-kb/README.md).
+
+Rename preview: `python3 scripts/change_bundle.py --new-package com.your.app --app-name "Your App" --dry-run`.
+Review the preview before applying. Never overwrite signing identities or Firebase configs.

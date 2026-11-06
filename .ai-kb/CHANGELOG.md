@@ -1,5 +1,23 @@
 # Knowledge base changelog
 
+## 2026-11-06 — Specialize the base for local financial data
+
+- Removed application HTTP dependencies, public API demo/configuration, backend error parsing,
+  payment contracts/artifact references and upload/premium guidance across source, skills and docs.
+- Added safe local DataResult and kept cancellation, ViewModel, navigation and UI behavior.
+- Added Room/SQLite entities, DAO, computed budget totals, local repository and schema export.
+  Retained DataStore preferences (`darkTheme`, `currency`, `onboardingCompleted`) and disabled
+  destructive migration/backup behavior.
+- Added build-selected Firebase Analytics, Crashlytics and Remote Config adapters with SDK-free
+  defaults, explicit telemetry controls and nonblocking cached/default configuration; updated
+  `scripts/change_bundle.py` to include `src/local/java` and `src/firebase/java`.
+- Removed purchase/paywall prerequisites and server reward fulfillment from ads, update and
+  rating/review contracts.
+- Retained AdsManager, Rating/Update references and existing CI/CD files.
+- Updated architecture, design-system and scaffolding references to match the actual local source.
+- Both local debug builds, minified release bundle, lint and test-source compilation passed.
+  See [verification](local-base-verification.md) for Firebase/configuration and runtime limits.
+
 ## 2026-11-05 — Fix example startup scroll constraints
 
 - Removed the redundant verticalScroll modifier from the example LazyColumn. It supplied

@@ -15,13 +15,12 @@ screen's navigation or reward callback after its context is invalidated.
 ## Feature integration
 
 The feature checks eligibility and quota, claims its action, requests the ad and applies the
-approved continuation. If reward delivery requires a feature API, keep that separate from payment
-entitlement: removing backend subscription verification does not remove unrelated feature APIs.
-Define idempotency and retry for a reward already earned before a feature commit fails.
+approved local continuation. Reward grants use an idempotent local write, with persisted evidence
+when retry must survive process death. Define that atomic grant with the actual reward feature.
 
 Confirm unavailable/disabled placement behavior, wait duration, retry, Back/dismiss, background
 handling and ordering relative to result UI before implementation. Do not inherit a previous
-product's timeouts, cooldowns, automatic paywall fallback or navigation sequence.
+product's timeouts, cooldowns, automatic alternate action or navigation sequence.
 
 ## Loading and interruption
 
@@ -30,14 +29,14 @@ them by stable feature context and reject callbacks after replacement, timeout o
 A timeout applies to waiting for presentation, not an ad already being displayed. A continuation
 may proceed without an interstitial only according to the feature's approved failure policy.
 
-Re-evaluate consent, shared premium eligibility and usable host state before showing. Eligibility
-comes from the [premium repository](../premium.md), without backend subscription status calls.
+Re-evaluate consent, app policy and usable host state before showing.
+No-fill and offline outcomes must not block unrelated local financial features.
 Cancellation and terminal cleanup must not cancel another owner's newer operation.
 
 ## Verification cases
 
 Cover duplicate taps, unresolved configuration, disabled placements, pending load, no fill, timeout,
-reward then dismissal, dismissal without reward, background, host destruction, entitlement change,
+reward then dismissal, dismissal without reward, background, host destruction, consent change,
 late callbacks and feature commit retry. Keep approved analytics tied to actual SDK outcomes.
 These are verification cases, not claims of executed tests; obtain authorization before test runs.
 
@@ -47,7 +46,7 @@ These are verification cases, not claims of executed tests; obtain authorization
 accepted feature action
 → synchronously claim in-flight owner
 → resolve placement configuration
-→ check current entitlement, consent and host
+→ check current app policy, consent and host
 → show / bounded load wait
 → SDK earned callback (rewarded only)
 → dismissal or terminal failure

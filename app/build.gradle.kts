@@ -6,6 +6,12 @@ plugins {
     alias(libs.plugins.ksp)
 }
 
+val firebaseEnabled = providers.gradleProperty("enableFirebase").orElse("false").get().toBooleanStrict()
+if (firebaseEnabled) {
+    apply(plugin = "com.google.gms.google-services")
+    apply(plugin = "com.google.firebase.crashlytics")
+}
+
 // Local files are optional. CI values take precedence, including explicitly empty values.
 fun configuration(environment: String): Map<String, String> {
     val file = rootProject.file(".env.$environment")
@@ -54,10 +60,8 @@ android {
                     versionNameSuffix = "-dev"
                 }
                 val config = configuration(environment)
-                val mode = config.value("DEMO_MODE", "offline")
-                require(mode in setOf("offline", "public")) { "DEMO_MODE must be offline or public" }
                 buildConfigField("String", "ENVIRONMENT", quoted(environment))
-                buildConfigField("String", "DEMO_MODE", quoted(mode))
+                buildConfigField("boolean", "FIREBASE_ENABLED", firebaseEnabled.toString())
                 buildConfigField("boolean", "SANDBOX", boolean(config.value("SANDBOX", (environment == "dev").toString())).toString())
                 resValue("string", "app_name", config.value("APP_NAME", "sour-base"))
             }
@@ -72,8 +76,17 @@ android {
         }
     }
     buildFeatures { compose = true; buildConfig = true; resValues = true }
+    sourceSets.getByName("main").kotlin.directories.add(
+        if (firebaseEnabled) "src/firebase/java" else "src/local/java",
+    )
+    if (firebaseEnabled) {
+        listOf("dev", "production").forEach {
+            sourceSets.getByName(it).manifest.srcFile("src/firebase/AndroidManifest.xml")
+        }
+    }
     compileOptions { sourceCompatibility = JavaVersion.VERSION_17; targetCompatibility = JavaVersion.VERSION_17 }
 }
+ksp { arg("room.schemaLocation", "$projectDir/schemas") }
 dependencies {
     implementation(libs.androidx.core.ktx)
     // Align app/test runtime graphs required by AndroidX Test 1.3.0.
@@ -94,9 +107,15 @@ dependencies {
     ksp(libs.hilt.compiler)
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.androidx.datastore.preferences)
-    implementation(libs.retrofit.core)
-    implementation(libs.retrofit.converter.kotlinx.serialization)
-    implementation(libs.okhttp)
+    implementation(libs.androidx.room.runtime)
+    ksp(libs.androidx.room.compiler)
+    if (firebaseEnabled) {
+        implementation(platform(libs.firebase.bom))
+        implementation(libs.firebase.analytics)
+        implementation(libs.firebase.crashlytics)
+        implementation(libs.firebase.config)
+        implementation(libs.kotlinx.coroutines.play.services)
+    }
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.junit)
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

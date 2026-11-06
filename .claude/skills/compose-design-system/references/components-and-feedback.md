@@ -55,10 +55,8 @@ own a `SnackbarHostState` in a screen or destination.
 Feature ViewModel injects the singleton `SnackbarController` and enqueues unresolved text:
 
 ```kotlin
-snackbar.show(text = UiText.Res(R.string.message_x), type = AppSnackbarType.Info)
-// Errors: backend message first, then the feature string, then the generic one:
-snackbar.show(text = error.toUiText(R.string.<feature>_<action>_error), type = AppSnackbarType.Error)
-// Never render exception text, HTTP reason phrases, or billing diagnostics.
+snackbar.show(message = null) // generic fallback; resolve approved feature error resources in UI
+// Never render exception text, SQL diagnostics, or stored personal data.
 ```
 
 Both `SnackbarController` and `AppViewModel.events` use buffered `Channel`s (not
@@ -73,6 +71,6 @@ snackbar currently on screen. Preserve this **latest-wins** behavior; never make
 every snackbar sequentially, which recreates a visible queue and delays newer feedback. The one
 opt-in exception is `afterCurrent = true` (`SnackbarController.show/showSuccess`,
 `UserMessage.afterCurrent`): that message waits for the snackbar on screen to finish, then shows.
-Use it only when two toasts must both be read in order (e.g. the deferred onboarding welcome after
-the restore-success toast). A later default message still wins over the whole chain: it cancels
+Use it only when two toasts must both be read in order (e.g. a deferred welcome message after
+an initial action toast). A later default message still wins over the whole chain: it cancels
 the snackbar on screen *and* any queued `afterCurrent` ones (`SnackbarMessageQueue.showSnackbarsInOrder`).

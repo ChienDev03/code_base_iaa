@@ -46,7 +46,7 @@ migration (values below are the ones to use).
 | `borderOnSurfacePrimary` | `Gray100` / `Gray600` | `outlineVariant` | phase 2 |
 | `backgroundOnSurfacePrimary` | `Slate50` / `Gray700` | `surfaceContainerLow` | phase 2 |
 | `bottomBarBackground` | `White1000` / `Gray800` | `surfaceContainer` | phase 2 |
-| `backgroundBaseQuaternary` | `Slate100` / `Gray600` | `surfaceContainerHighest` (+ `surfaceVariant`, already read by `AppNetworkImage`) | phase 2 |
+| `backgroundBaseQuaternary` | `Slate100` / `Gray600` | `surfaceContainerHighest` (+ `surfaceVariant`, already read by `AppLoadingSkeleton`) | phase 2 |
 | `backgroundBrandTertiary` | `Orange50` / `Gray800` | `tertiaryContainer` | phase 2 |
 | `textFuncError` | `Red500` / `Red400` | `error` | phase 2 |
 | `backgroundFuncError` | `Red50` / `Red900` | `errorContainer` | phase 2 |

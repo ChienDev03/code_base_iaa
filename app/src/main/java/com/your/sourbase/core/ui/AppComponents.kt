@@ -55,7 +55,7 @@ fun AppLoadingSkeleton(label: String) {
         }
     }
 }
-/** Painter-based reusable image boundary; remote loading must use one bounded sized loader. */
+/** Painter-based reusable local image boundary. */
 @Composable
 fun AppImage(painter: androidx.compose.ui.graphics.painter.Painter, description: String?, modifier: Modifier = Modifier) {
     androidx.compose.foundation.Image(painter, description, modifier = modifier,

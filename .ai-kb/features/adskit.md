@@ -11,6 +11,5 @@ inherited from a previous application.
 | Rewarded and fullscreen lifecycle | [Lifecycle](adskit/rewarded.md) |
 
 The app owns placement policy and feature continuation. The SDK owns consent and ad lifecycle
-according to its supported APIs. Premium policy observes the shared
-[premium and subscription](premium.md) repository, without backend subscription status calls.
+according to its supported APIs. Ads eligibility uses app policy, consent, configuration and host readiness. Local data access never waits for ads.
 Disabled ads must be absent from dependencies, merged manifests and startup/DI paths.

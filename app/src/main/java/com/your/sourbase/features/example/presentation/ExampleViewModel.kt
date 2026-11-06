@@ -1,7 +1,7 @@
 package com.your.sourbase.features.example.presentation
 import androidx.lifecycle.viewModelScope
 import com.your.sourbase.core.base.AppViewModel
-import com.your.sourbase.core.network.ApiResult
+import com.your.sourbase.core.data.DataResult
 import com.your.sourbase.core.ui.SnackbarController
 import com.your.sourbase.features.example.data.Example
 import com.your.sourbase.features.example.data.ExampleRepository
@@ -32,10 +32,10 @@ class ExampleViewModel @Inject constructor(
             updateState { it.copy(loading = !hasData, refreshing = hasData, failed = false) }
             try {
                 when (val result = repository.load()) {
-                    is ApiResult.Success -> updateState { it.copy(items = result.data.items, failed = false, message = null) }
-                    is ApiResult.Failure -> {
-                        if (hasData) snackbar.show(result.error.message)
-                        else updateState { it.copy(failed = true, message = result.error.message) }
+                    is DataResult.Success -> updateState { it.copy(items = result.data.items, failed = false, message = null) }
+                    DataResult.Failure -> {
+                        if (hasData) snackbar.show(null)
+                        else updateState { it.copy(failed = true, message = null) }
                     }
                 }
             } finally {

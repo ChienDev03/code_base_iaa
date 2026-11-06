@@ -8,7 +8,7 @@
 #   .claude/scripts/check-design-tokens.sh --update-baseline # accept current violations as known
 #
 # Only violations that are NOT in design-tokens-baseline.txt fail the run, so known
-# legacy code (e.g. the pre-design-system PaywallScreen) does not cause alert fatigue.
+# legacy code does not cause alert fatigue.
 # Exit 0 = no new violations, 1 = new violations (details on stderr).
 
 set -uo pipefail

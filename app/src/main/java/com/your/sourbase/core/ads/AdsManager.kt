@@ -10,5 +10,5 @@ interface AdsManager {
     suspend fun showRewarded(activity: Activity, placement: String): AdOutcome
     fun cancelPendingShows()
 }
-/** Only Earned may request idempotent backend fulfillment; dismiss alone grants nothing. */
+/** Only Earned may grant a local reward; the feature deduplicates it. Dismiss alone grants nothing. */
 enum class AdOutcome { Earned, Dismissed, Skipped, Failed }

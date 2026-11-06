@@ -3,7 +3,7 @@ import androidx.navigation3.runtime.NavKey
 import com.your.sourbase.navigation.AppRouteSerializersModule
 import com.your.sourbase.features.example.presentation.ExampleDetail
 import com.your.sourbase.core.config.IntegrationState
-import com.your.sourbase.core.network.safeRequest
+import com.your.sourbase.core.data.localOperation
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.test.runTest
 import kotlinx.serialization.json.Json
@@ -22,9 +22,9 @@ class OwnershipTest {
         assertFalse(IntegrationState(consentGranted = true).available)
         assertTrue(IntegrationState(true, true, true, true, true).available)
     }
-    @Test fun requestCancellationIsNotApiFailure() = runTest {
+    @Test fun localCancellationIsNotFailure() = runTest {
         try {
-            safeRequest<Nothing> { throw CancellationException("cancelled") }
+            localOperation<Nothing> { throw CancellationException("cancelled") }
             fail("Cancellation must propagate")
         } catch (_: CancellationException) { /* expected */ }
     }

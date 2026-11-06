@@ -1,6 +1,5 @@
 package com.your.sourbase
-import com.your.sourbase.core.network.ApiResult
-import com.your.sourbase.core.network.ApiError
+import com.your.sourbase.core.data.DataResult
 import com.your.sourbase.core.ui.SnackbarController
 import com.your.sourbase.features.example.data.*
 import com.your.sourbase.features.example.presentation.ExampleViewModel
@@ -21,7 +20,7 @@ class ExampleViewModelTest {
             model.reload()
             runCurrent()
             assertEquals(1, fake.calls)
-            fake.response.complete(ApiResult.Success(ExampleSnapshot(listOf(Example(1, null, null)), 1)))
+            fake.response.complete(DataResult.Success(ExampleSnapshot(listOf(Example(1, null, null)), 1)))
             runCurrent()
             assertEquals(1, model.state.value.items.size)
             fake.response = CompletableDeferred()
@@ -30,7 +29,7 @@ class ExampleViewModelTest {
             assertEquals(2, fake.calls)
             assertTrue(model.state.value.refreshing)
             assertEquals(1, model.state.value.items.size)
-            fake.response.complete(ApiResult.Failure(ApiError()))
+            fake.response.complete(DataResult.Failure)
             runCurrent()
             assertFalse(model.state.value.refreshing)
             assertEquals(1, model.state.value.items.size)
@@ -38,7 +37,7 @@ class ExampleViewModelTest {
     }
     private class FakeRepository : ExampleRepository {
         var calls = 0
-        var response = CompletableDeferred<ApiResult<ExampleSnapshot>>()
-        override suspend fun load(): ApiResult<ExampleSnapshot> { calls++; return response.await() }
+        var response = CompletableDeferred<DataResult<ExampleSnapshot>>()
+        override suspend fun load(): DataResult<ExampleSnapshot> { calls++; return response.await() }
     }
 }

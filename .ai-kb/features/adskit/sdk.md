@@ -16,9 +16,8 @@ A runtime enable switch alone does not meet that requirement.
 ## Startup and readiness
 
 Initialize once per supported configuration and coalesce concurrent work. Keep configuration
-resolution, premium eligibility, consent, SDK initialization and placement readiness distinct.
-Do not wait on backend subscription status: use the shared [premium repository](../premium.md).
-When ads require inactive premium access, unresolved entitlement keeps requests disabled.
+resolution, consent, SDK initialization and placement readiness distinct.
+Ads availability must never block reading or writing local financial data.
 
 Follow the selected SDK's consent sequence. Provide privacy options when required by its consent
 contract. Consent failure and cached-consent handling must follow that contract, without inventing
@@ -55,7 +54,6 @@ core/ads/AdsManager                  app-facing interface
 core/ads/AdsKitAdsManager            delegate over the vendor SDK
 core/ads/AdPlacement                 stable placement identity
 core/ads/AdsConfigFactory            local/remote configuration mapping
-core/ads/AdsPremiumSyncer            shared provider-backed entitlement → ads eligibility
 core/di/AdsModule                    adapter and SDK construction
 core/ui/components/ads/AppBannerAd   themed banner host
 ```
@@ -72,7 +70,7 @@ implementation(files("libs/AdsKit-<version>.aar"))
 | --- | --- |
 | `AdsKit.initialize(context, config, callback)` | Register configuration and initialize once when gates permit |
 | `AdsKit.initializationState` | Observe deferred/loading/ready/failed initialization |
-| `AdsKit.setAdsEnabled(enabled)` | Apply the latest premium/app policy, including before readiness |
+| `AdsKit.setAdsEnabled(enabled)` | Apply the latest app policy, including before readiness |
 | `AdsKit.gatherConsent(activity)` | Refresh consent and show a form if required |
 | `AdsKit.consentState` | Observe consent and privacy-options requirements |
 | `AdsKit.showPrivacyOptionsForm(activity)` | Show consent privacy options |
